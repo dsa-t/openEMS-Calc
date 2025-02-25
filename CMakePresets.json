@@ -1,0 +1,51 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {}
+        },
+        {
+            "name": "win64",
+            "hidden": true,
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows",
+                "CMAKE_INSTALL_PREFIX": "C:/Sim/Prefix",
+                "CMAKE_PREFIX_PATH": "C:/Sim/Prefix",
+                "CMAKE_FIND_DEBUG_MODE": "OFF"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "inherits": [
+                "base"
+            ]
+        },
+        {
+            "name": "x64-release",
+            "displayName": "x64 Release",
+            "description": "Sets release build type",
+            "inherits": "win64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x64-release",
+            "configurePreset": "x64-release",
+            "description": "Builds x64 release"
+        }
+    ]
+}

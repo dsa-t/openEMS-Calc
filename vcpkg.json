@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "ems-calc",
+  "version": "1.0",
+  "license": "GPL-2.0+",
+  "dependencies": [
+    "wxwidgets"
+  ]
+}

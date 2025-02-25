@@ -1,0 +1,16 @@
+tmp*
+*~
+*.so*
+.directory
+build/
+build_*.log
+localConfig.cmake
+*.tar.bz2
+wd
+
+.vs
+.vscode
+
+!doc-src
+doc-src/_build
+doc-src/**/__*
