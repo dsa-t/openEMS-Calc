@@ -2,13 +2,16 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <complex>
 #include <stdexcept>
 #include <cmath>
+#include <optional>
 
 // Forward declarations (assumed to be defined elsewhere)
 class ContinuousStructure;
 class CSPropExcitation;
+class CSProperties;
 
 
 //
@@ -21,16 +24,6 @@ public:
             const std::string &path,
             const std::vector<double> &freq,
             const std::string &signal_type = "pulse");
-
-    // UI_data(const std::string &fn,
-    //         const std::string &path,
-    //         const std::vector<double> &freq,
-    //         const std::string &signal_type = "pulse");
-
-    // UI_data(const std::string &fn,
-    //         const std::string &path,
-    //         double freq,
-    //         const std::string &signal_type = "pulse");
 
     // Data arrays
     std::vector< std::vector<double> > ui_time;
@@ -50,12 +43,12 @@ private:
 //
 class Port {
 public:
-    Port(ContinuousStructure* csx,
+    Port(ContinuousStructure *csx,
          int port_nr,
-         const std::vector<double>& start,
-         const std::vector<double>& stop,
+         const std::array<double, 3> &start,
+         const std::array<double, 3> &stop,
          double excite,
-         const std::string& PortNamePrefix = "",
+         const std::string &PortNamePrefix = "",
          double delay = 0.0,
          int priority = 0);
     virtual ~Port() {}
@@ -70,18 +63,18 @@ public:
 
     // Calculate port parameters.
     virtual void CalcPort(const std::string& sim_path,
-                          const std::vector<double>& freq,
-                          double ref_impedance = -1,
-                          double ref_plane_shift = 0.0,
-                          const std::string& signal_type = "pulse");
+        const std::vector<double>& freq,
+        std::optional<std::complex<double>> ref_impedance = std::nullopt,
+        double ref_plane_shift = 0.0,
+        const std::string& signal_type = "pulse");
 
     // Member variables
     ContinuousStructure* CSX_ptr;
     int number;
     double excite;
-    std::vector<double> start;
-    std::vector<double> stop;
-    double Z_ref;
+    std::array<double, 3> start;
+    std::array<double, 3> stop;
+    std::complex<double> Z_ref;
     double delay;
     double measplane_shift;
     int priority;
@@ -113,141 +106,147 @@ public:
     std::vector<double> P_ref;
     std::vector<double> P_acc;
 
-    std::vector<double> beta;
+    std::vector<std::complex<double>> beta;
 
     // UI_data objects for U and I.
-    UI_data* u_data;
-    UI_data* i_data;
+    std::unique_ptr<UI_data> u_data;
+    std::unique_ptr<UI_data> i_data;
 
 protected:
     // A container for properties (excitations, probes, etc.)
-    // In a full implementation, this could be a vector of pointers to ContinuousStructureCAD primitives.
-    std::vector<void*> port_props;
+    std::vector<CSProperties*> port_props;
 };
 
-// //
-// // LumpedPort: Derived from Port for lumped port implementation.
-// //
-// class LumpedPort : public Port {
-// public:
-//     LumpedPort(ContinuousStructure* csx,
-//                int port_nr,
-//                double R,
-//                const std::vector<double>& start,
-//                const std::vector<double>& stop,
-//                int exc_dir,
-//                double excite = 0.0,
-//                const std::string& PortNamePrefix = "",
-//                double delay = 0.0,
-//                int priority = 0);
-//     virtual void CalcPort(const std::string& sim_path,
-//                           const std::vector<double>& freq,
-//                           double ref_impedance = -1,
-//                           double ref_plane_shift = 0.0,
-//                           const std::string& signal_type = "pulse") override;
+//
+// LumpedPort: A port implementation based on a lumped element
+//
+class LumpedPort : public Port {
+public:
+    LumpedPort(ContinuousStructure* csx,
+               int port_nr,
+               double R,
+               const std::array<double, 3>& start,
+               const std::array<double, 3>& stop,
+               int exc_dir,
+               double excite,
+               const std::string& PortNamePrefix = "",
+               double delay = 0.0,
+               int priority = 0);
 
-//     double R;      // Port resistor value
-//     int exc_ny;    // Excitation direction index
-// };
+    virtual void CalcPort(const std::string& sim_path,
+        const std::vector<double>& freq,
+        std::optional<std::complex<double>> ref_impedance = std::nullopt,
+        double ref_plane_shift = 0.0,
+        const std::string& signal_type = "pulse") override;
 
-// //
-// // MSLPort: Microstrip transmission line port.
-// //
-// class MSLPort : public Port {
-// public:
-//     MSLPort(ContinuousStructure* csx,
-//             int port_nr,
-//             void* metal_prop, // pointer to metal properties object
-//             const std::vector<double>& start,
-//             const std::vector<double>& stop,
-//             int prop_dir,
-//             int exc_dir,
-//             double excite = 0.0,
-//             double FeedShift = 0.0,
-//             double MeasPlaneShift = 0.0,
-//             double Feed_R = std::numeric_limits<double>::infinity(),
-//             const std::string& PortNamePrefix = "",
-//             double delay = 0.0,
-//             int priority = 0);
+private:
+    double R;
+    int exc_ny;
+    int direction;
+};
+
+//
+// MSLPort: Microstrip transmission line port.
+//
+class MSLPort : public Port {
+public:
+    MSLPort(ContinuousStructure* csx,
+            int port_nr,
+            CSProperties *metal_prop,
+            const std::array<double, 3>& start,
+            const std::array<double, 3>& stop,
+            int prop_dir,
+            int exc_dir,
+            double excite = 0.0,
+            double FeedShift = 0.0,
+            double MeasPlaneShift = std::numeric_limits<double>::signaling_NaN(),
+            double Feed_R = std::numeric_limits<double>::infinity(),
+            const std::string& PortNamePrefix = "",
+            double delay = 0.0,
+            int priority = 0);
+
+    MSLPort(ContinuousStructure *cs_ptr, 
+        int prio, 
+        int port_nr, 
+        CSProperties* metal_prop, 
+        const std::array<double, 3> &start, 
+        const std::array<double, 3> &stop, 
+        int dir, const std::array<double, 3> &evec, 
+        bool excite_port, 
+        double FeedShift = 0.0,
+        double MeasPlaneShift = std::numeric_limits<double>::signaling_NaN(),
+        double Feed_R = std::numeric_limits<double>::infinity(),
+        const std::string& PortNamePrefix = "",
+        double delay = 0.0);
+
+    // Overridden method to read UI data for MSLPort.
+    virtual void ReadUIData(const std::string& sim_path,
+                            const std::vector<double>& freq,
+                            const std::string& signal_type = "pulse") override;
+
+    // Additional members for MSLPort
+    int exc_ny;
+    int prop_ny;
+    int direction;
+    int upside_down;
+    double feed_shift;
+    double measplane_shift;
+    double measplane_pos;
+    double feed_R;
+    // For voltage/current probe positions
+    std::vector<double> U_delta;
+    std::vector<double> I_delta;
+};
+
+//
+// WaveguidePort: Base class for waveguide ports
+//
+class WaveguidePort : public Port
+{
+public:
+    WaveguidePort(ContinuousStructure *csx,
+                  int port_nr,
+                  const std::array<double, 3> &start,
+                  const std::array<double, 3> &stop,
+                  int exc_dir,
+                  const std::array<std::string, 3>& E_WG_func,
+                  const std::array<std::string, 3>& H_WG_func,
+                  double kc,
+                  double excite,
+                  const std::string &PortNamePrefix = "",
+                  double delay = 0.0,
+                  int priority = 0);
+
+    virtual void CalcPort(const std::string& sim_path,
+        const std::vector<double>& freq,
+        std::optional<std::complex<double>> ref_impedance = std::nullopt,
+        double ref_plane_shift = 0.0,
+        const std::string& signal_type = "pulse") override;
+
+    // Additional members for waveguide ports.
+    int exc_ny;
+    int ny_P;
+    int ny_PP;
+    double kc; // cutoff parameter
+    std::array<std::string, 3> E_func;
+    std::array<std::string, 3> H_func;
+    double ref_index;
+    std::vector<std::complex<double>> ZL;
+};
+
+class RectWGPort : public WaveguidePort {
+    public:
+        RectWGPort(ContinuousStructure *csx,
+                   int port_nr,
+                   const std::array<double, 3> &start,
+                   const std::array<double, 3> &stop,
+                   int exc_dir,
+                   double a,
+                   double b,
+                   const std::string &mode_name,
+                   double excite = 0.0,
+                   const std::string &PortNamePrefix = "",
+                   double delay = 0.0,
+                   int priority = 0);
+    };
     
-//     // Overridden method to read UI data for MSLPort.
-//     virtual void ReadUIData(const std::string& sim_path,
-//                             const std::vector<double>& freq,
-//                             const std::string& signal_type = "pulse") override;
-
-//     // Additional members for MSLPort
-//     int exc_ny;
-//     int prop_ny;
-//     int direction;
-//     int upside_down;
-//     double feed_shift;
-//     double measplane_shift;
-//     double measplane_pos;
-//     double feed_R;
-//     // For voltage/current probe positions
-//     std::vector<double> U_delta;
-//     std::vector<double> I_delta;
-// };
-
-// //
-// // WaveguidePort: Base class for waveguide ports
-// //
-// class WaveguidePort : public Port {
-// public:
-//     WaveguidePort(ContinuousStructure* csx,
-//                   int port_nr,
-//                   const std::vector<double>& start,
-//                   const std::vector<double>& stop,
-//                   int exc_dir,
-//                   const std::vector<std::string>& E_WG_func,
-//                   const std::vector<std::string>& H_WG_func,
-//                   double kc,
-//                   double excite = 0.0,
-//                   const std::string& PortNamePrefix = "",
-//                   double delay = 0.0,
-//                   int priority = 0);
-    
-//     virtual void CalcPort(const std::string& sim_path,
-//                           const std::vector<double>& freq,
-//                           double ref_impedance = -1,
-//                           double ref_plane_shift = 0.0,
-//                           const std::string& signal_type = "pulse") override;
-
-//     // Additional members for waveguide ports.
-//     int exc_ny;
-//     int ny_P;
-//     int ny_PP;
-//     double kc;     // cutoff parameter
-//     std::vector<std::string> E_func;
-//     std::vector<std::string> H_func;
-//     double ref_index;
-//     std::vector<double> ZL;
-// };
-
-// //
-// // RectWGPort: Rectangular waveguide port using TE modes.
-// //
-// class RectWGPort : public WaveguidePort {
-// public:
-//     RectWGPort(ContinuousStructure* csx,
-//                int port_nr,
-//                const std::vector<double>& start,
-//                const std::vector<double>& stop,
-//                int exc_dir,
-//                double a,
-//                double b,
-//                const std::string& mode_name,
-//                double excite = 0.0,
-//                const std::string& PortNamePrefix = "",
-//                double delay = 0.0,
-//                int priority = 0);
-
-//     // WG_size stores a and b.
-//     std::vector<double> WG_size;
-//     std::string WG_mode;
-//     bool TE;
-//     bool TM;
-//     double M;
-//     double N;
-//     double unit;
-// };

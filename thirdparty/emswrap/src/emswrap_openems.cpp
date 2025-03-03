@@ -234,3 +234,39 @@ int _openEMS::Run(const std::string &sim_path, bool cleanup, bool setup_only, co
     fs::current_path(oldPath);
     return 0;
 }
+
+
+WaveguidePort _openEMS::AddWaveGuidePort(int port_nr,
+                                             const std::array<double, 3> &start,
+                                             const std::array<double, 3> &stop,
+                                             char p_dir,
+                                             const std::array<std::string, 3>& E_WG_func,
+                                            const std::array<std::string, 3>& H_WG_func,
+                                             double kc,
+                                             bool excite)
+{
+    return WaveguidePort(m_CSX, port_nr, start, stop, p_dir, E_WG_func, H_WG_func, kc, excite);
+}
+
+RectWGPort _openEMS::AddRectWaveGuidePort(int port_nr,
+                                              const std::array<double, 3> &start,
+                                              const std::array<double, 3> &stop,
+                                              char p_dir,
+                                              double a,
+                                              double b,
+                                              const std::string &mode_name,
+                                              bool excite)
+{
+    return RectWGPort(m_CSX, port_nr, start, stop, p_dir, a, b, mode_name, excite);
+}
+
+MSLPort _openEMS::AddMSLPort(int port_nr,
+                                 CSProperties *metal_prop,
+                                 const std::array<double, 3> &start,
+                                 const std::array<double, 3> &stop,
+                                 char prop_dir,
+                                 char exc_dir,
+                                 bool excite)
+{
+    return MSLPort(m_CSX, port_nr, metal_prop, start, stop, prop_dir, exc_dir, excite);
+}

@@ -40,6 +40,13 @@ public:
                                         bool CheckMesh = true,
                                         double allowed_max_ratio = -1.0);
 
+    std::vector<double> SmoothMeshLines2(int ny,
+                                         const std::vector<double> &lines,
+                                         double max_res,
+                                         double ratio = 1.3,
+                                         bool CheckMesh = true,
+                                         double allowed_max_ratio = -1.0);
+
     CSRectGrid* operator->() { return _ptr; };
 
 protected:

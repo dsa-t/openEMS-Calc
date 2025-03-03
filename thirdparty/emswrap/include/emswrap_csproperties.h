@@ -12,6 +12,7 @@ class CSProperties;
 class CSPrimitives;
 class CSPropMaterial;
 class CSPropExcitation;
+class CSPropProbeBox;
 class ParameterSet;
 
 // _CSProperties: wrapper class for a CSProperties pointer.
@@ -43,21 +44,6 @@ public:
     void SetEdgeColor(const std::string &color, int alpha = 255);
     std::tuple<int,int,int,int> GetEdgeColor() const;
 
-    //     if prop_name=='epsilon':
-//     return (<_CSPropMaterial*>self.thisptr).SetEpsilon(val, ny)
-// elif prop_name=='mue':
-//     return (<_CSPropMaterial*>self.thisptr).SetMue(val, ny)
-// elif prop_name=='kappa':
-//     return (<_CSPropMaterial*>self.thisptr).SetKappa(val, ny)
-// elif prop_name=='sigma':
-//     return (<_CSPropMaterial*>self.thisptr).SetSigma(val, ny)
-
-    // Properties
-    // void SetEpsilon(double epsilon, int ny = 0);
-    // void SetMue(double mue, int ny = 0);
-    // void SetKappa(double kappa, int ny = 0);
-    // void SetSigma(double sigma, int ny = 0);
-
     // Visibility
     bool GetVisibility() const;
     void SetVisibility(bool val);
@@ -74,7 +60,10 @@ public:
 
     // Primitive creation functions
     CSPrimitives *AddPoint(const std::array<double, 3> &coord);
-    CSPrimitives *AddBox(const std::array<double, 3> &start, const std::array<double, 3> &stop);
+    
+    CSPrimitives *AddBox(const std::array<double, 3> &start, const std::array<double, 3> &stop, int priority = 0);
+    CSPrimitives *AddBox(int priority, const std::array<double, 3> &start, const std::array<double, 3> &stop);
+
     CSPrimitives *AddCylinder(const std::array<double, 3> &start, const std::array<double, 3> &stop, double radius);
     CSPrimitives *AddCylindricalShell(const std::array<double, 3> &start, const std::array<double, 3> &stop, double radius, double shell_width);
     CSPrimitives *AddSphere(const std::array<double, 3> &center, double radius);
@@ -87,26 +76,30 @@ public:
     CSPrimitives *AddPolyhedron();
     CSPrimitives *AddPolyhedronReader(const std::string &filename);
 
-    // Retrieve the underlying pointer (for internal use)
-    CSProperties* getPtr() const { return _ptr; }
+    CSProperties *ptr() const { return _ptr; };
+    CSProperties *operator->() { return _ptr; };
+    operator CSProperties *() const { return _ptr; };
 
 protected:
     CSProperties* _ptr; // underlying C++ CSProperties pointer
 };
 
+class _CSPropMaterial : public _CSProperties
+{
+public:
+    _CSPropMaterial(CSPropMaterial *ptr);
 
-class _CSPropMaterial : public _CSProperties {
-    public:
-        _CSPropMaterial(CSPropMaterial* ptr);
+    void SetIsotropy(bool isotropic);
+    bool GetIsotropy() const;
+    void SetMaterialProperty(const std::string &prop_name, double value, int ny = 0);
+    double GetMaterialProperty(const std::string &prop_name, int ny = 0) const;
+    void SetMaterialWeight(const std::string &prop_name, const std::string &weightFunc, int ny = 0);
+    std::string GetMaterialWeight(const std::string &prop_name, int ny = 0) const;
 
-        void SetIsotropy(bool isotropic);
-        bool GetIsotropy() const;
-        void SetMaterialProperty(const std::string &prop_name, double value, int ny = 0);
-        double GetMaterialProperty(const std::string &prop_name, int ny = 0) const;
-        void SetMaterialWeight(const std::string &prop_name, const std::string &weightFunc, int ny = 0);
-        std::string GetMaterialWeight(const std::string &prop_name, int ny = 0) const;
+    CSPropMaterial *ptr() const;
+    CSPropMaterial *operator->() { return ptr(); };
+    operator CSPropMaterial *() const { return ptr(); };
 };
-
 
 class _CSPropExcitation : public _CSProperties {
 public:
@@ -139,6 +132,42 @@ public:
     // Set and get the delay for the excitation signal
     void SetDelay(double val);
     double GetDelay() const;
+
+    CSPropExcitation *ptr() const;
+    CSPropExcitation *operator->() { return ptr(); };
+    operator CSPropExcitation *() const { return ptr(); };
+};
+
+class _CSPropProbeBox : public _CSProperties
+{
+public:
+    _CSPropProbeBox(CSPropProbeBox *ptr);
+
+    // Probe type accessors
+    void SetProbeType(int val);
+    int GetProbeType() const;
+
+    // Weighting factor accessors
+    void SetWeighting(double val);
+    double GetWeighting() const;
+
+    // Normal direction accessors
+    void SetNormalDir(int val);
+    int GetNormalDir() const;
+
+    // Frequency domain sample management
+    void AddFrequency(double freq);
+    void ClearFrequency();
+    void SetFrequency(double freq);
+    std::vector<double> GetFrequency() const;
+    int GetFrequencyCount() const;
+
+    // Mode function setting, stores mode functions as attributes ("ModeFunctionX", etc.)
+    void SetModeFunction(const std::array<std::string, 3> &mode_fun);
+
+    CSPropProbeBox *ptr() const;
+    CSPropProbeBox *operator->() { return ptr(); };
+    operator CSPropProbeBox *() const { return ptr(); };
 };
 
 // Wrapper helpers
@@ -148,12 +177,17 @@ inline _CSProperties emswrap(CSProperties *ptr)
     return _CSProperties(ptr);
 }
 
+inline _CSPropMaterial emswrap(CSPropMaterial *ptr)
+{
+    return _CSPropMaterial(ptr);
+}
+
 inline _CSPropExcitation emswrap(CSPropExcitation *ptr)
 {
     return _CSPropExcitation(ptr);
 }
 
-inline _CSPropMaterial emswrap(CSPropMaterial *ptr)
+inline _CSPropProbeBox emswrap(CSPropProbeBox *ptr)
 {
-    return _CSPropMaterial(ptr);
+    return _CSPropProbeBox(ptr);
 }

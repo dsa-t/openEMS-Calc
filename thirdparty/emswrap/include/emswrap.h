@@ -3,7 +3,9 @@
 #include "emswrap_nf2ff.h"
 #include "emswrap_ports.h"
 #include "emswrap_smoothmeshlines.h"
+#include "emswrap_smoothmeshlines2.h"
 #include "emswrap_csx.h"
 #include "emswrap_csrectgrid.h"
 #include "emswrap_csproperties.h"
+#include "emswrap_calcport.h"
 

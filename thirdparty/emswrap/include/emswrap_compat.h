@@ -17,8 +17,7 @@ constexpr double EPS0 = 1.0 / (MUE0 * C0 * C0); // F/m
 constexpr double Z0 = 376.73031346177065; // std::sqrt(MUE0 / EPS0)
 
 
-template<typename T>
-static std::vector<double> linspace(T start_in, T end_in, int num_in)
+static std::vector<double> linspace(double start_in, double end_in, int num_in)
 {
     std::vector<double> linspaced;
 
@@ -42,6 +41,91 @@ static std::vector<double> linspace(T start_in, T end_in, int num_in)
 
     return linspaced;
 }
+
+// Finds the index of value in arr closest to specified value
+static int interp1_nearest(double value, const std::vector<double>& arr)
+{
+    double dist = DBL_MAX;
+    int idx = -1;
+    for (int i = 0; i < arr.size(); ++i) {
+        double newDist = std::abs(value - arr[i]);
+        if (newDist < dist) {
+            dist = newDist;
+            idx = i;
+        }
+    }
+
+    return idx;
+}
+
+static std::vector<double> diff(std::vector<double>& arr) {
+    std::vector<double> ret;
+
+    if (arr.size() < 2)
+        return ret;
+
+    ret.resize(arr.size() - 1);
+
+    for (size_t i = 0; i < arr.size() - 1; i++) {
+        ret[i] = arr[i + 1] - arr[i];
+    }
+
+    return ret;
+}
+
+class num_vector : public std::vector<double> {
+public:
+    num_vector() = default;
+    num_vector(std::initializer_list<double> il) : std::vector<double>(il) {}
+    num_vector(const std::vector<double>& vec) : std::vector<double>(vec) {}
+    num_vector(std::vector<double>&& vec) : std::vector<double>(std::move(vec)) {}
+
+    num_vector(const num_vector& other) : std::vector<double>(other) {}
+    num_vector(num_vector&& other) : std::vector<double>(std::move(other)) {}
+
+    template<typename Arg, typename... Args>
+    num_vector(Arg arg0, Args&&... args) {
+        append(arg0, std::forward<Args>(args)...);
+    }
+
+    num_vector& append(double value) {
+        this->push_back(value);
+        return *this;
+    }
+
+    num_vector& append(const std::vector<double>& values) {
+        this->insert(this->end(), values.begin(), values.end());
+        return *this;
+    }
+
+    num_vector& append(const num_vector& values) {
+        this->insert(this->end(), values.begin(), values.end());
+        return *this;
+    }
+
+    template<typename Func>
+    num_vector& append_transform(Func fn, const std::vector<double>& values) {
+        for (const double &value : values)
+            this->push_back(fn(value));
+        return *this;
+    }
+
+    template <typename Arg, typename... Args>
+    num_vector& append(Arg arg0, Args &&...args)
+    {
+        append(arg0);
+        append(std::forward<Args>(args)...);
+        return *this;
+    }
+
+    num_vector operator-() const
+    {
+        num_vector result;
+        for (const double &value : *this)
+            result.push_back(-value);
+        return result;
+    }
+};
 
 static std::vector<double> uniqueSorted(const std::vector<double> &vec) {
     std::vector<double> sorted = vec;

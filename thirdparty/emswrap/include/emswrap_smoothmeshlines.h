@@ -8,6 +8,8 @@
 
 namespace SmoothMesh {
 
+#pragma optimize("",off)
+
 // Internal function to check if the mesh lines are symmetric
 static int CheckSymmetry(const std::vector<double>& lines, double tolerance = 1e-10) {
     if (lines.size() <= 2) return 0;

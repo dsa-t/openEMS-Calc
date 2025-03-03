@@ -2,6 +2,7 @@
 #include <emswrap_compat.h>
 #include <emswrap_csrectgrid.h>
 #include <emswrap_smoothmeshlines.h>
+#include <emswrap_smoothmeshlines2.h>
 
 #include <vector>
 #include <cmath>
@@ -45,18 +46,23 @@ double _CSRectGrid::GetLine(int ny, int idx) const {
     return _ptr->GetLine(ny, idx);
 }
 
+#pragma optimize("",off)
 std::vector<double> _CSRectGrid::GetLines(int ny, bool do_sort)
 {
     ny = CheckNyDir(ny);
 
-    std::vector<double> lines;
     size_t qty = _ptr->GetQtyLines(ny);
+    std::vector<double> lines(qty);
 
     for (size_t i = 0; i < qty; ++i)
-        lines.push_back(_ptr->GetLine(ny, i));
+        lines[i] = _ptr->GetLine(ny, i);
+
+    if (do_sort)
+        std::sort(lines.begin(), lines.end());
 
     return lines;
 }
+#pragma optimize("",on)
 
 void _CSRectGrid::clear() {
     _ptr->clear();
@@ -104,24 +110,19 @@ void _CSRectGrid::SmoothMeshLines(int ny, double max_res, double ratio) {
     }
 
     ny = CheckNyDir(ny);
-
-    std::vector<double> lines;
-    unsigned int qty = _ptr->GetQtyLines(ny);
-    for (unsigned int i = 0; i < qty; ++i)
-        lines.push_back(_ptr->GetLine(ny, i));
-
-    lines = SmoothMesh::SmoothMeshLines(lines, max_res, ratio);
-
-    _ptr->ClearLines(ny);
-    for (double line : lines)
-        _ptr->AddDiscLine(ny, line);
+    SetLines(ny, SmoothMesh::SmoothMeshLines(GetLines(ny), max_res, ratio));
 }
+
+#pragma optimize("",off)
 
 std::vector<double> _CSRectGrid::SmoothMeshLines(int ny, const std::vector<double> &lines, double max_res, double ratio, int recursive, bool CheckMesh, double allowed_max_ratio)
 {
     std::vector<double> lines_new = lines;
     if (lines_new.size() < 2)
         return lines_new;
+
+    if (allowed_max_ratio == -1.0)
+        allowed_max_ratio = ratio * 1.25;
 
     // sort and unique
     std::sort(lines_new.begin(), lines_new.end());
@@ -192,6 +193,14 @@ std::vector<double> _CSRectGrid::SmoothMeshLines(int ny, const std::vector<doubl
     return lines_new;
 }
 
+std::vector<double> _CSRectGrid::SmoothMeshLines2(int ny, const std::vector<double> &lines, double max_res, double ratio, bool CheckMesh, double allowed_max_ratio)
+{
+    auto lines_new = SmoothMesh::SmoothMeshLines2(lines, max_res, ratio, CheckMesh, allowed_max_ratio);
+    SetLines(ny, lines_new);
+
+    return lines_new;
+}
+
 void _CSRectGrid::SetLines(int ny, const std::vector<double>& lines) {
     ny = CheckNyDir(ny);
     
@@ -213,3 +222,5 @@ void _CSRectGrid::AddLine(int ny, const std::vector<double>& lines) {
     for (const double line : lines)
         _ptr->AddDiscLine(ny, line);
 }
+
+#pragma optimize("",on)

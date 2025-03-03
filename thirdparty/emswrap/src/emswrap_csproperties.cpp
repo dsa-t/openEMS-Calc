@@ -24,6 +24,7 @@
 #include <CSPropProbeBox.h>
 #include <CSPropDumpBox.h>
 #include <CSPropConductingSheet.h>
+#include <CSPropMetal.h>
 
 #include <cassert>
 
@@ -163,31 +164,8 @@ CSPrimitives* _CSProperties::AddPoint(const std::array<double, 3>& coord) {
     return prim;
 }
 
-CSPrimitives* _CSProperties::AddBox(const std::array<double, 3>& start, const std::array<double, 3>& stop) {
-    // def SetStart(self, coord):
-    //     """ SetStart(coord)
-
-    //     Set the start coordinate for this box primitive.
-
-    //     :param coord: list/array of float -- Set the start point coordinate
-    //     """
-    //     ptr = <_CSPrimBox*>self.thisptr
-    //     assert len(coord)==3, "CSPrimBox:SetStart: length of array needs to be 3"
-    //     for n in range(3):
-    //         ptr.SetCoord(2*n, coord[n])
-
-    // def SetStop(self, coord):
-    //     """ SetStop(coord)
-
-    //     Set the stop coordinate for this box primitive.
-
-    //     :param coord: list/array of float -- Set the stop point coordinate
-    //     """
-    //     ptr = <_CSPrimBox*>self.thisptr
-    //     assert len(coord)==3, "CSPrimBox:SetStop: length of array needs to be 3"
-    //     for n in range(3):
-    //         ptr.SetCoord(2*n+1, coord[n])
-
+// Python-like API
+CSPrimitives* _CSProperties::AddBox(const std::array<double, 3>& start, const std::array<double, 3>& stop, int priority) {
     assert(start.size() == 3);
     assert(stop.size() == 3);
 
@@ -200,7 +178,14 @@ CSPrimitives* _CSProperties::AddBox(const std::array<double, 3>& start, const st
     prim->SetCoord(3, stop[1]);
     prim->SetCoord(5, stop[2]);
 
+    prim->SetPriority(priority);
+
     return prim;
+}
+
+// MatLab-like API
+CSPrimitives* _CSProperties::AddBox(int priority, const std::array<double, 3>& start, const std::array<double, 3>& stop) {
+    return AddBox(start, stop, priority);
 }
 
 CSPrimitives* _CSProperties::AddCylinder(const std::array<double, 3>& start, const std::array<double, 3>& stop, double radius) {
@@ -371,6 +356,10 @@ _CSPropMaterial::_CSPropMaterial(CSPropMaterial* ptr)
 {
 }
 
+CSPropMaterial* _CSPropMaterial::ptr() const {
+    return _ptr->ToMaterial();
+}
+
 void _CSPropMaterial::SetIsotropy(bool isotropic) {
     auto mat = _ptr->ToMaterial();
     if (mat) {
@@ -470,6 +459,10 @@ std::string _CSPropMaterial::GetMaterialWeight(const std::string &prop_name, int
 _CSPropExcitation::_CSPropExcitation(CSPropExcitation* ptr)
     : _CSProperties(ptr)
 {
+}
+
+CSPropExcitation* _CSPropExcitation::ptr() const {
+    return _ptr->ToExcitation();
 }
 
 void _CSPropExcitation::SetExcitType(int val) {
@@ -577,4 +570,67 @@ void _CSPropExcitation::SetDelay(double val) {
 double _CSPropExcitation::GetDelay() const {
     auto exc = _ptr->ToExcitation();
     return (exc ? exc->GetDelay() : 0.0);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// _CSPropProbeBox
+//////////////////////////////////////////////////////////////////////////
+_CSPropProbeBox::_CSPropProbeBox(CSPropProbeBox* ptr)
+    : _CSProperties(ptr)
+{
+}
+
+CSPropProbeBox* _CSPropProbeBox::ptr() const {
+    return _ptr->ToProbeBox();
+}
+
+void _CSPropProbeBox::SetProbeType(int val) {
+    ptr()->SetProbeType(val);
+}
+
+int _CSPropProbeBox::GetProbeType() const {
+    return ptr()->GetProbeType();
+}
+
+void _CSPropProbeBox::SetWeighting(double val) {
+    ptr()->SetWeighting(val);
+}
+
+double _CSPropProbeBox::GetWeighting() const {
+    return ptr()->GetWeighting();
+}
+
+void _CSPropProbeBox::SetNormalDir(int val) {
+    ptr()->SetNormalDir(val);
+}
+
+int _CSPropProbeBox::GetNormalDir() const {
+    return ptr()->GetNormalDir();
+}
+
+void _CSPropProbeBox::AddFrequency(double freq) {
+    ptr()->AddFDSample(freq);
+}
+
+void _CSPropProbeBox::ClearFrequency() {
+    ptr()->ClearFDSamples();
+}
+
+void _CSPropProbeBox::SetFrequency(double freq) {
+    ptr()->ClearFDSamples();
+    ptr()->AddFDSample(freq);
+}
+
+std::vector<double> _CSPropProbeBox::GetFrequency() const {
+    return *ptr()->GetFDSamples();
+}
+
+int _CSPropProbeBox::GetFrequencyCount() const {
+    return ptr()->GetFDSamples()->size();
+}
+
+void _CSPropProbeBox::SetModeFunction(const std::array<std::string, 3>& mode_fun) {
+    ptr()->AddAttribute("ModeFunctionX", mode_fun[0]);
+    ptr()->AddAttribute("ModeFunctionY", mode_fun[1]);
+    ptr()->AddAttribute("ModeFunctionZ", mode_fun[2]);
 }
